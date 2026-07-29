@@ -10,7 +10,7 @@ komputerze) — appka na Androida to tylko wyświetlacz widgetu.
 
 Nie chcesz budować projektu sam? Gotowy plik APK jest dołączony do
 [najnowszego wydania (Releases)](https://github.com/pi0trdotsys/ZarobkiWidget/releases/latest) —
-pobierz `app-release.apk` na telefon i zainstaluj (włącz instalację z
+pobierz plik `.apk` na telefon i zainstaluj (włącz instalację z
 nieznanych źródeł, jeśli system o to poprosi). To build podpisany kluczem
 debug — wystarczający do własnego użytku, nie do publikacji w Sklepie Play.
 
