@@ -282,9 +282,15 @@ class EarningsWidget : GlanceAppWidget() {
             }
 
             Spacer(modifier = GlanceModifier.height(6.dp))
+            val footerText = when {
+                errorMsg.isNotBlank() && lastSync.isNotBlank() -> "Dane z $lastSync · dotknij, by ponowić"
+                lastSync.isNotBlank() -> "Aktualizacja: $lastSync"
+                else -> "Dotknij, by odświeżyć"
+            }
+            val footerColor = if (errorMsg.isNotBlank()) AccentAmber else TextMuted
             Text(
-                text = if (lastSync.isNotBlank()) "Aktualizacja: $lastSync" else "Dotknij, by odświeżyć",
-                style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp)
+                text = footerText,
+                style = TextStyle(color = ColorProvider(footerColor), fontSize = 9.sp)
             )
         }
     }
@@ -294,7 +300,10 @@ class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
             prefs.toMutablePreferences().apply {
-                this[WidgetKeys.STATUS] = "loading"
+                val hadData = this[WidgetKeys.STATUS] == "ok"
+                if (!hadData) {
+                    this[WidgetKeys.STATUS] = "loading"
+                }
             }
         }
         EarningsWidget().update(context, glanceId)

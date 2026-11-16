@@ -50,8 +50,13 @@ class RefreshWorker(appContext: Context, params: WorkerParameters) :
                             remove(WidgetKeys.ERROR_MSG)
                         }
                         is FetchResult.Error -> {
-                            this[WidgetKeys.STATUS] = "error"
-                            this[WidgetKeys.ERROR_MSG] = result.message
+                            val hadData = this[WidgetKeys.STATUS] == "ok"
+                            if (hadData) {
+                                this[WidgetKeys.ERROR_MSG] = result.message
+                            } else {
+                                this[WidgetKeys.STATUS] = "error"
+                                this[WidgetKeys.ERROR_MSG] = result.message
+                            }
                         }
                     }
                 }
