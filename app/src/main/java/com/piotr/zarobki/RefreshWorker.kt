@@ -35,10 +35,12 @@ class RefreshWorker(appContext: Context, params: WorkerParameters) :
 
         val result = EarningsRepository().fetch(settings.webAppUrl, settings.secretToken)
         val timeLabel = SimpleDateFormat("HH:mm", Locale.forLanguageTag("pl-PL")).format(Date())
+        val theme = settings.theme
 
         ids.forEach { id ->
             updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, id) { prefs ->
                 prefs.toMutablePreferences().apply {
+                    this[WidgetKeys.THEME] = theme
                     when (result) {
                         is FetchResult.Success -> {
                             this[WidgetKeys.STATUS] = "ok"
@@ -47,6 +49,7 @@ class RefreshWorker(appContext: Context, params: WorkerParameters) :
                             this[WidgetKeys.GROSS] = result.data.gross
                             this[WidgetKeys.NET] = result.data.net
                             this[WidgetKeys.LAST_SYNC] = timeLabel
+                            this[WidgetKeys.EDIT_URL] = result.data.editUrl
                             remove(WidgetKeys.ERROR_MSG)
                         }
                         is FetchResult.Error -> {

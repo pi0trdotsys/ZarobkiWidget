@@ -12,7 +12,8 @@ private val Context.dataStore by preferencesDataStore(name = "zarobki_settings")
 
 data class AppSettings(
     val webAppUrl: String = "",
-    val secretToken: String = ""
+    val secretToken: String = "",
+    val theme: String = "TECH_DARK"
 ) {
     val isConfigured: Boolean get() = webAppUrl.isNotBlank()
 }
@@ -20,6 +21,7 @@ data class AppSettings(
 object SettingsKeys {
     val WEB_APP_URL = stringPreferencesKey("web_app_url")
     val SECRET_TOKEN = stringPreferencesKey("secret_token")
+    val THEME = stringPreferencesKey("theme")
 }
 
 class SettingsRepository(private val context: Context) {
@@ -27,16 +29,18 @@ class SettingsRepository(private val context: Context) {
     val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
             webAppUrl = prefs[SettingsKeys.WEB_APP_URL] ?: "",
-            secretToken = prefs[SettingsKeys.SECRET_TOKEN] ?: ""
+            secretToken = prefs[SettingsKeys.SECRET_TOKEN] ?: "",
+            theme = prefs[SettingsKeys.THEME] ?: "TECH_DARK"
         )
     }
 
     suspend fun current(): AppSettings = settingsFlow.first()
 
-    suspend fun save(webAppUrl: String, secretToken: String) {
+    suspend fun save(webAppUrl: String, secretToken: String, theme: String) {
         context.dataStore.edit { prefs ->
             prefs[SettingsKeys.WEB_APP_URL] = webAppUrl.trim()
             prefs[SettingsKeys.SECRET_TOKEN] = secretToken.trim()
+            prefs[SettingsKeys.THEME] = theme
         }
     }
 }
