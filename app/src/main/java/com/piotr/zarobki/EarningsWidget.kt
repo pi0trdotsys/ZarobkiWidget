@@ -69,11 +69,12 @@ class EarningsWidget : GlanceAppWidget() {
 
     companion object {
         private val SMALL = DpSize(110.dp, 40.dp)
+        private val SMALL_TALL = DpSize(110.dp, 64.dp)
         private val MEDIUM = DpSize(180.dp, 40.dp)
         private val LARGE = DpSize(180.dp, 110.dp)
     }
 
-    override val sizeMode = SizeMode.Responsive(setOf(SMALL, MEDIUM, LARGE))
+    override val sizeMode = SizeMode.Responsive(setOf(SMALL, SMALL_TALL, MEDIUM, LARGE))
     override val stateDefinition = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -158,18 +159,24 @@ class EarningsWidget : GlanceAppWidget() {
     private fun CompactContent(prefs: Preferences, c: WidgetColors) {
         val status = prefs[WidgetKeys.STATUS] ?: "loading"
         val nf = NumberFormat.getIntegerInstance(PL)
+        val roomy = LocalSize.current.height >= 64.dp
+        val labelSize = if (roomy) 11.sp else 9.sp
+        val valueSize = if (roomy) 15.sp else 10.sp
+        val suffix = if (roomy) " zł" else ""
 
-        Shell(c, hPad = 6.dp, vPad = 3.dp, buttonWidth = 24.dp, plusSize = 16.sp) {
+        Shell(c, hPad = if (roomy) 10.dp else 6.dp, vPad = 3.dp,
+            buttonWidth = if (roomy) 30.dp else 24.dp, plusSize = if (roomy) 20.sp else 16.sp) {
             Text(header(prefs, short = true), maxLines = 1,
-                style = TextStyle(color = c.accentPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold))
+                style = TextStyle(color = c.accentPrimary, fontSize = labelSize, fontWeight = FontWeight.Bold))
+            if (roomy) Spacer(GlanceModifier.height(2.dp))
             when (status) {
-                "error" -> Text("Błąd", style = TextStyle(color = c.accentWarn, fontSize = 10.sp))
-                "loading" -> Text("...", style = TextStyle(color = c.textMuted, fontSize = 10.sp))
+                "error" -> Text("Błąd", style = TextStyle(color = c.accentWarn, fontSize = valueSize))
+                "loading" -> Text("...", style = TextStyle(color = c.textMuted, fontSize = valueSize))
                 else -> {
-                    Text("B ${nf.format(prefs[WidgetKeys.GROSS] ?: 0.0)}", maxLines = 1,
-                        style = TextStyle(color = c.textPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold))
-                    Text("N ${nf.format(prefs[WidgetKeys.NET] ?: 0.0)}", maxLines = 1,
-                        style = TextStyle(color = c.accentPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+                    Text("B ${nf.format(prefs[WidgetKeys.GROSS] ?: 0.0)}$suffix", maxLines = 1,
+                        style = TextStyle(color = c.textPrimary, fontSize = valueSize, fontWeight = FontWeight.Bold))
+                    Text("N ${nf.format(prefs[WidgetKeys.NET] ?: 0.0)}$suffix", maxLines = 1,
+                        style = TextStyle(color = c.accentPrimary, fontSize = valueSize, fontWeight = FontWeight.Bold))
                 }
             }
         }
