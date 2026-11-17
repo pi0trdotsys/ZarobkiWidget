@@ -1,6 +1,7 @@
 package com.piotr.zarobki
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -14,59 +15,60 @@ class RefreshWorker(appContext: Context, params: WorkerParameters) :
     CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val settingsRepo = SettingsRepository(applicationContext)
-        val settings = settingsRepo.current()
-        val manager = GlanceAppWidgetManager(applicationContext)
-        val ids = manager.getGlanceIds(EarningsWidget::class.java)
+        val context = applicationContext
+        val settings = SettingsRepository(context).current()
+        val ids = GlanceAppWidgetManager(context).getGlanceIds(EarningsWidget::class.java)
         if (ids.isEmpty()) return Result.success()
 
         if (!settings.isConfigured) {
-            ids.forEach { id ->
-                updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, id) { prefs ->
-                    prefs.toMutablePreferences().apply {
-                        this[WidgetKeys.STATUS] = "error"
-                        this[WidgetKeys.ERROR_MSG] = "Otworz aplikacje i podaj adres URL"
-                    }
-                }
+            updateWidgets(context) {
+                this[WidgetKeys.STATUS] = "error"
+                this[WidgetKeys.ERROR_MSG] = "Otwórz aplikację i podaj adres URL"
+                this[WidgetKeys.REFRESHING] = false
             }
-            updateAllWidgetInstances(applicationContext)
             return Result.success()
         }
 
-        val result = EarningsRepository().fetch(settings.webAppUrl, settings.secretToken)
-        val timeLabel = SimpleDateFormat("HH:mm", Locale.forLanguageTag("pl-PL")).format(Date())
-        val theme = settings.theme
-
-        ids.forEach { id ->
-            updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, id) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    this[WidgetKeys.THEME] = theme
-                    when (result) {
-                        is FetchResult.Success -> {
-                            this[WidgetKeys.STATUS] = "ok"
-                            this[WidgetKeys.MONTH] = result.data.month
-                            this[WidgetKeys.YEAR] = result.data.year
-                            this[WidgetKeys.GROSS] = result.data.gross
-                            this[WidgetKeys.NET] = result.data.net
-                            this[WidgetKeys.LAST_SYNC] = timeLabel
-                            this[WidgetKeys.EDIT_URL] = result.data.editUrl
-                            remove(WidgetKeys.ERROR_MSG)
-                        }
-                        is FetchResult.Error -> {
-                            val hadData = this[WidgetKeys.STATUS] == "ok"
-                            if (hadData) {
-                                this[WidgetKeys.ERROR_MSG] = result.message
-                            } else {
-                                this[WidgetKeys.STATUS] = "error"
-                                this[WidgetKeys.ERROR_MSG] = result.message
-                            }
-                        }
-                    }
+        return when (val result = EarningsRepository().fetch(settings.webAppUrl, settings.secretToken)) {
+            is FetchResult.Success -> {
+                storeEarnings(context, result.data, settings.theme)
+                Result.success()
+            }
+            is FetchResult.Error -> {
+                updateWidgets(context) {
+                    this[WidgetKeys.THEME] = settings.theme
+                    if (this[WidgetKeys.STATUS] != "ok") this[WidgetKeys.STATUS] = "error"
+                    this[WidgetKeys.ERROR_MSG] = result.message
+                    this[WidgetKeys.REFRESHING] = false
                 }
+                Result.retry()
             }
         }
-        updateAllWidgetInstances(applicationContext)
-
-        return if (result is FetchResult.Error) Result.retry() else Result.success()
     }
+}
+
+suspend fun storeEarnings(context: Context, data: EarningsData, theme: String) {
+    val timeLabel = SimpleDateFormat("HH:mm", Locale.forLanguageTag("pl-PL")).format(Date())
+    updateWidgets(context) {
+        this[WidgetKeys.THEME] = theme
+        this[WidgetKeys.STATUS] = "ok"
+        this[WidgetKeys.MONTH] = data.month
+        this[WidgetKeys.YEAR] = data.year
+        this[WidgetKeys.GROSS] = data.gross
+        this[WidgetKeys.NET] = data.net
+        this[WidgetKeys.LAST_SYNC] = timeLabel
+        this[WidgetKeys.EDIT_URL] = data.editUrl
+        this[WidgetKeys.REFRESHING] = false
+        remove(WidgetKeys.ERROR_MSG)
+    }
+}
+
+suspend fun updateWidgets(context: Context, block: MutablePreferences.() -> Unit) {
+    val ids = GlanceAppWidgetManager(context).getGlanceIds(EarningsWidget::class.java)
+    ids.forEach { id ->
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, id) { prefs ->
+            prefs.toMutablePreferences().apply(block)
+        }
+    }
+    updateAllWidgetInstances(context)
 }

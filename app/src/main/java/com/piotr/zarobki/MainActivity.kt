@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -94,37 +95,12 @@ fun ZarobkiApp() {
         selectedTheme = ThemeName.fromString(settings.theme)
     }
 
-    val colorScheme = when {
-        selectedTheme == ThemeName.MATERIAL_YOU && Build.VERSION.SDK_INT >= 31 ->
-            dynamicDarkColorScheme(context)
-        selectedTheme == ThemeName.ARCTIC -> {
-            if (Build.VERSION.SDK_INT >= 31) dynamicLightColorScheme(context)
-            else {
-                val ac = WidgetThemes.getAppColors(ThemeName.ARCTIC)
-                lightColorScheme(
-                    background = ac.background, surface = ac.surface,
-                    onBackground = ac.onSurface, onSurface = ac.onSurface,
-                    onSurfaceVariant = ac.onSurfaceVariant,
-                    primary = ac.primary, tertiary = ac.tertiary,
-                )
-            }
-        }
-        else -> {
-            val ac = WidgetThemes.getAppColors(selectedTheme)
-            darkColorScheme(
-                background = ac.background, surface = ac.surface,
-                onBackground = ac.onSurface, onSurface = ac.onSurface,
-                onSurfaceVariant = ac.onSurfaceVariant,
-                primary = ac.primary, tertiary = ac.tertiary,
-            )
-        }
-    }
-
-    MaterialTheme(colorScheme = colorScheme) {
+    ZarobkiTheme(selectedTheme) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                .systemBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
