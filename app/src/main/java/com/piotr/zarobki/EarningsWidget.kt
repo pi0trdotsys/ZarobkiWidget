@@ -235,11 +235,23 @@ class WidgetTapAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
         val editUrl = prefs[WidgetKeys.EDIT_URL] ?: ""
-        if (editUrl.isNotBlank()) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(editUrl)).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        try {
+            if (editUrl.isNotBlank()) {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(editUrl))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } else {
+                context.startActivity(
+                    Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
             }
-            context.startActivity(intent)
+        } catch (_: Exception) {
+            context.startActivity(
+                Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
         }
         WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<RefreshWorker>().build())
     }
