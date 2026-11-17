@@ -26,6 +26,7 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
@@ -103,16 +104,7 @@ class EarningsWidget : GlanceAppWidget() {
     }
 
     private fun resolveAction(prefs: Preferences): Action {
-        val editUrl = prefs[WidgetKeys.EDIT_URL] ?: ""
-        return if (editUrl.isNotBlank()) {
-            actionStartActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(editUrl)).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-            )
-        } else {
-            actionRunCallback<RefreshAction>()
-        }
+        return actionRunCallback<WidgetTapAction>()
     }
 
     @Composable
@@ -236,6 +228,20 @@ class EarningsWidget : GlanceAppWidget() {
             val footerColor = if (errorMsg.isNotBlank()) c.accentWarn else c.textMuted
             Text(footerText, style = TextStyle(color = footerColor, fontSize = 9.sp))
         }
+    }
+}
+
+class WidgetTapAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
+        val editUrl = prefs[WidgetKeys.EDIT_URL] ?: ""
+        if (editUrl.isNotBlank()) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(editUrl)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        }
+        WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<RefreshWorker>().build())
     }
 }
 
